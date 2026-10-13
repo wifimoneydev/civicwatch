@@ -1,0 +1,33 @@
+{
+  "name": "civicwatch",
+  "displayName": "CivicWatch",
+  "version": "0.1.0",
+  "description": "Citizens incident reporting app (Cordova + Supabase)",
+  "private": true,
+  "license": "UNLICENSED",
+  "engines": {
+    "node": ">=20.17.0"
+  },
+  "scripts": {
+    "test": "node --test \"tests/unit/**/*.test.js\"",
+    "serve": "npx --yes http-server@14.1.1 www -p 8080 -c-1",
+    "build:android": "cordova build android --debug"
+  },
+  "devDependencies": {
+    "cordova": "13.0.0",
+    "cordova-android": "15.1.0",
+    "cordova-plugin-camera": "8.0.0",
+    "cordova-plugin-geolocation": "5.0.0"
+  },
+  "cordova": {
+    "platforms": [
+      "android"
+    ],
+    "plugins": {
+      "cordova-plugin-camera": {},
+      "cordova-plugin-geolocation": {
+        "GPS_REQUIRED": "false"
+      }
+    }
+  }
+}

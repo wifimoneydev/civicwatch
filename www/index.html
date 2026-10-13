@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <!--
+      Content Security Policy:
+      - scripts/styles only from the app bundle (no inline JS, no CDNs)
+      - network only to Supabase (REST/Auth/Storage over https, Realtime over wss)
+      - images from the bundle, captured photos (data:/blob:) and Supabase Storage
+    -->
+    <meta http-equiv="Content-Security-Policy"
+          content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob: https://*.supabase.co; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'">
+    <meta name="viewport" content="initial-scale=1, width=device-width, viewport-fit=cover">
+    <meta name="color-scheme" content="light">
+    <title>CivicWatch</title>
+    <link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+    <main class="boot">
+        <h1 class="brand">CivicWatch</h1>
+        <p class="tagline">Citizens incident reporting</p>
+
+        <section class="card" aria-labelledby="diag-title">
+            <h2 id="diag-title">Build diagnostics</h2>
+            <p class="muted">Phase 0 scaffold. This screen confirms the APK runs and native plugins load.</p>
+            <ul class="checks">
+                <li>Cordova <code>deviceready</code>: <strong id="chk-ready">waiting…</strong></li>
+                <li>Platform: <strong id="chk-platform">–</strong></li>
+                <li>Camera plugin: <strong id="chk-camera">–</strong></li>
+                <li>Geolocation: <strong id="chk-geo">–</strong></li>
+            </ul>
+        </section>
+    </main>
+    <script src="cordova.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>

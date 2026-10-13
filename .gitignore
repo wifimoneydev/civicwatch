@@ -1,0 +1,9 @@
+node_modules/
+platforms/
+plugins/
+*.apk
+*.aab
+.DS_Store
+.env
+.env.*
+dist/

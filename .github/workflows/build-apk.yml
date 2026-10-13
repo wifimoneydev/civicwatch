@@ -1,0 +1,93 @@
+name: Build Android APK
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: apk-${{ github.ref }}
+  cancel-in-progress: true
+
+# Versions verified against cordova-android 15.1.0
+# (framework/cdv-gradle-config-defaults.json + docs):
+#   JDK 17, Gradle 8.14.2, Build Tools >= 36.0.0, compile/target SDK 36, min SDK 24.
+env:
+  NODE_VERSION: '24'
+  JAVA_VERSION: '17'
+  GRADLE_VERSION: '8.14.2'
+  ANDROID_PLATFORM: 'platforms;android-36'
+  ANDROID_BUILD_TOOLS: 'build-tools;36.0.0'
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Set up JDK
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          gradle-version: ${{ env.GRADLE_VERSION }}
+
+      - name: Install Android SDK packages
+        run: |
+          SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          yes | "$SDKMANAGER" --licenses > /dev/null || true
+          "$SDKMANAGER" --install "$ANDROID_PLATFORM" "$ANDROID_BUILD_TOOLS" "platform-tools"
+
+      - name: Install npm dependencies
+        run: npm ci
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Restore Cordova platform and plugins
+        run: npx cordova prepare android
+
+      - name: Check Cordova requirements
+        run: npx cordova requirements android
+
+      - name: Print toolchain versions
+        run: |
+          node -v; npm -v
+          java -version 2>&1 | head -1
+          gradle --version | grep -E '^Gradle'
+          npx cordova -v
+          npx cordova platform ls
+          npx cordova plugin ls
+          ls "$ANDROID_HOME/build-tools" "$ANDROID_HOME/platforms"
+
+      - name: Build debug APK
+        run: npx cordova build android --debug
+
+      - name: Rename APK
+        run: |
+          APK=platforms/android/app/build/outputs/apk/debug/app-debug.apk
+          test -f "$APK"
+          mkdir -p dist
+          cp "$APK" "dist/civicwatch-debug-${GITHUB_SHA::7}.apk"
+          ls -lh dist
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: civicwatch-debug-apk
+          path: dist/*.apk
+          if-no-files-found: error
+          retention-days: 30
