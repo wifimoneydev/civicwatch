@@ -116,9 +116,17 @@ runs the unit tests, then builds with `cordova build android --debug`.
 2. Copy the `.apk` to the phone and open it. Allow **Install unknown apps** for the app you opened it from,
    then tap **Install**, and **Install anyway** if Play Protect warns about an unrecognised developer.
 
-The APK is a **debug build signed with the Android debug key** generated on the build server. It is not a
-Play Store release. Each build uses a new debug key, so uninstall the previous version first if installing
-fails with "App not installed".
+The APK is a **debug build**, not a Play Store release. Since version 1.0.0 every build is signed with the
+same committed **debug-only** key ([`signing/`](signing/README.md)), so a new APK installs over the previous
+one and keeps the login. Builds made before 1.0.0 used a random key each time: if an older CivicWatch is
+installed, **uninstall it once** before installing 1.0.0. Otherwise Android reports "App not installed" and
+keeps the old app.
+
+**Which build is installed?** The version and commit are shown under **App diagnostics** (login screen and
+Profile), e.g. `Version 1.0.0 · c28497a`. The workflow also checks every APK before uploading it:
+- the packaged `www/` files match the commit exactly
+- the build info names that commit
+- the APK is signed with the expected key
 
 | Component | Version |
 |---|---|
@@ -217,8 +225,8 @@ optional, so phones without GPS can still install the app.
 
 | Command | What it covers | Mocked or live |
 |---|---|---|
-| `npm test` | 102 unit tests: config and secret checks, Content Security Policy, version pins, **access policies run against the real migration in local Postgres (PGlite)**, validation compared with the database constraints, session logic, the submit and cleanup logic, feed paging, categories, out-of-date responses, the notification filter and subscription cleanup. Also run by GitHub Actions before every build. | Local Postgres; no network |
-| `npm run test:e2e` | Drives the real app in headless Chrome: auth (54 checks), reporting (52), and the feed, details and notifications (62). | Supabase responses and Realtime events are simulated. The auth suite includes 6 live checks that create no accounts |
+| `npm test` | 104 unit tests: config and secret checks, Content Security Policy, version pins, **access policies run against the real migration in local Postgres (PGlite)**, validation compared with the database constraints, session logic, the submit and cleanup logic, feed paging, categories, out-of-date responses, the notification filter and subscription cleanup. Also run by GitHub Actions before every build. | Local Postgres; no network |
+| `npm run test:e2e` | Drives the real app in headless Chrome: start-up the way it runs on Android, with `deviceready` (16 checks), auth (54), reporting (52), and the feed, details and notifications (62). | Supabase responses and Realtime events are simulated. The auth suite includes 6 live checks that create no accounts |
 
 ### Live checks against your project (prompt for test-account passwords, never print them, delete their test data)
 

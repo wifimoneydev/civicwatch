@@ -87,6 +87,7 @@ test('index.html loads only bundled scripts, in dependency order', () => {
     assert.deepEqual(srcs, [
         'cordova.js',
         `vendor/supabase-js-${pkg.devDependencies['@supabase/supabase-js']}.js`,
+        'js/build-info.js',
         'js/config.js',
         'js/config-check.js',
         'js/supabase-client.js',
@@ -113,6 +114,24 @@ test('vendored supabase-js is the exact pinned npm build', () => {
     assert.ok(vendored.equals(upstream), 'run npm run vendor:supabase');
     const files = fs.readdirSync(path.join(root, 'www/vendor')).filter((f) => f.startsWith('supabase-js-'));
     assert.deepEqual(files, [`supabase-js-${version}.js`], 'stale vendored copies present');
+});
+
+test('CI signs with the committed debug key and verifies the packaged APK', () => {
+    const build = JSON.parse(read('build.json'));
+    assert.equal(build.android.debug.keystore, 'signing/civicwatch-debug.p12');
+    assert.ok(fs.existsSync(path.join(root, build.android.debug.keystore)), 'debug keystore missing');
+    assert.match(workflow, /cordova build android --debug --buildConfig build\.json/);
+    assert.match(workflow, /DEBUG_CERT_SHA256: '[0-9a-f]{64}'/);
+    assert.match(workflow, /apksigner" verify --print-certs/);
+    assert.match(workflow, /> www\/js\/build-info\.js/);
+    assert.match(workflow, /assets\/www\/\$f/);
+});
+
+test('build-info.js provides version and commit, matching package.json', () => {
+    const sandbox = { window: {} };
+    require('node:vm').runInNewContext(read('www/js/build-info.js'), sandbox);
+    assert.equal(sandbox.window.CIVICWATCH_BUILD.version, pkg.version);
+    assert.ok(sandbox.window.CIVICWATCH_BUILD.commit);
 });
 
 test('CI workflow uses the toolchain cordova-android requires', () => {

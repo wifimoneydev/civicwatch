@@ -384,6 +384,15 @@
     // ---------------------------------------------------------------- start-up
 
     function init() {
+        // The app always starts at login / the feed. A diagnostics hash left
+        // over from a previous session must never become the start screen.
+        if (routeFromHash() === 'diagnostics' || routeFromHash() === 'back') {
+            history.replaceState(null, '', location.pathname + location.search);
+        }
+        var b = window.CIVICWATCH_BUILD || {};
+        Array.prototype.forEach.call(document.querySelectorAll('[data-build-tag]'), function (el) {
+            el.textContent = 'Version ' + (b.version || '?') + ' · ' + (b.commit || '?');
+        });
         // Clear a field's error as soon as the user edits it.
         ['login-email', 'login-password', 'signup-email', 'signup-password', 'signup-confirm'].forEach(function (id) {
             $(id).addEventListener('input', function () {

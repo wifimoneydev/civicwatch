@@ -44,8 +44,15 @@
         });
     }
 
+    function buildLabel() {
+        var b = window.CIVICWATCH_BUILD || {};
+        return (b.version || '?') + ' · commit ' + (b.commit || '?') + (b.run ? ' · CI run ' + b.run : '') +
+            (b.builtAt ? ' · built ' + b.builtAt : '');
+    }
+
     function run() {
         var isCordova = !!window.cordova;
+        mark('chk-version', true, buildLabel());
         mark('chk-ready', isCordova, isCordova ? 'fired' : 'not running in Cordova (browser)');
         mark('chk-platform', true, (window.cordova && window.cordova.platformId) || 'browser');
         mark('chk-camera', !!navigator.camera, navigator.camera ? 'available' : 'not available');
@@ -53,5 +60,5 @@
         checkBackend();
     }
 
-    window.CivicWatchDiagnostics = { run: run };
+    window.CivicWatchDiagnostics = { run: run, buildLabel: buildLabel };
 })();

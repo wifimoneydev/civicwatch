@@ -1,0 +1,11 @@
+{
+  "android": {
+    "debug": {
+      "keystore": "signing/civicwatch-debug.p12",
+      "storePassword": "android",
+      "alias": "androiddebugkey",
+      "password": "android",
+      "keystoreType": "pkcs12"
+    }
+  }
+}

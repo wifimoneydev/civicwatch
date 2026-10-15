@@ -105,6 +105,7 @@
         </div>
 
         <p class="auth-footer"><a href="#/diagnostics">App diagnostics</a></p>
+        <p class="build-tag" data-build-tag></p>
     </section>
 
     <!-- Signed-in area -->
@@ -267,6 +268,7 @@
                     <button type="button" id="logout-button" class="btn btn-danger btn-block">Log out</button>
                 </div>
                 <p class="auth-footer"><a href="#/diagnostics">App diagnostics</a></p>
+                <p class="build-tag" data-build-tag></p>
             </section>
         </main>
 
@@ -300,6 +302,7 @@
             <section class="card" aria-labelledby="diag-title">
                 <p class="muted">Confirms the APK runs, native plugins load and the backend is reachable.</p>
                 <ul class="checks">
+                    <li>App version: <strong id="chk-version">–</strong></li>
                     <li>Cordova <code>deviceready</code>: <strong id="chk-ready">waiting…</strong></li>
                     <li>Platform: <strong id="chk-platform">–</strong></li>
                     <li>Camera plugin: <strong id="chk-camera">–</strong></li>
@@ -313,6 +316,7 @@
 
     <script src="cordova.js"></script>
     <script src="vendor/supabase-js-2.117.2.js"></script>
+    <script src="js/build-info.js"></script>
     <script src="js/config.js"></script>
     <script src="js/config-check.js"></script>
     <script src="js/supabase-client.js"></script>

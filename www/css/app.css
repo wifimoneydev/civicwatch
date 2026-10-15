@@ -126,6 +126,7 @@ h1, h2, h3 { line-height: 1.25; }
 .segment.active { background: var(--white); color: var(--navy-900); box-shadow: var(--shadow); }
 
 .auth-footer { text-align: center; margin-top: 24px; font-size: 0.9375rem; }
+.build-tag { text-align: center; margin: 4px 0 0; font-size: 0.75rem; color: var(--grey-600); }
 
 /* ------------------------------------------------------------ forms */
 

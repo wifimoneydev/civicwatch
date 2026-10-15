@@ -33,10 +33,23 @@ export function createReporter() {
 
 // ------------------------------------------------------------------ static server
 
-export function serve() {
+// opts.fakeCordova: serve a stand-in cordova.js that behaves like Cordova on
+// Android at start-up (defines window.cordova, fires deviceready later), so
+// the app's deviceready start-up path is exercised.
+const FAKE_CORDOVA = `window.cordova = { platformId: 'android', version: 'e2e-fake' };
+document.addEventListener('DOMContentLoaded', function () {
+    setTimeout(function () { document.dispatchEvent(new Event('deviceready')); }, 150);
+});`;
+
+export function serve(opts = {}) {
     const types = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.txt': 'text/plain' };
     const server = http.createServer((req, res) => {
         const rel = decodeURIComponent(new URL(req.url, 'http://x').pathname).replace(/^\/+/, '') || 'index.html';
+        if (rel === 'cordova.js' && opts.fakeCordova) {
+            res.writeHead(200, { 'content-type': 'text/javascript' });
+            res.end(FAKE_CORDOVA);
+            return;
+        }
         const file = path.join(www, rel);
         if (!file.startsWith(www) || !fs.existsSync(file) || fs.statSync(file).isDirectory()) {
             res.writeHead(404); res.end(); return; // cordova.js is absent in a browser, as intended
@@ -313,9 +326,9 @@ export async function login(page, email, password) {
 
 
 // Starts the server + Chrome, runs phases, prints a summary and exits.
-export async function run(phases) {
+export async function run(phases, opts = {}) {
     const reporter = createReporter();
-    const server = await serve();
+    const server = await serve(opts);
     const base = `http://127.0.0.1:${server.address().port}`;
     const chrome = await launchChrome();
     try {

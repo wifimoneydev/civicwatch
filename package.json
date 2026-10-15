@@ -1,7 +1,7 @@
 {
   "name": "civicwatch",
   "displayName": "CivicWatch",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Citizens incident reporting app (Cordova + Supabase)",
   "private": true,
   "license": "UNLICENSED",
@@ -10,7 +10,8 @@
   },
   "scripts": {
     "test": "node --test \"tests/unit/**/*.test.js\"",
-    "test:e2e": "node tests/e2e/auth-flow.e2e.mjs && node tests/e2e/report-flow.e2e.mjs && node tests/e2e/feed-flow.e2e.mjs",
+    "test:e2e": "node tests/e2e/startup.e2e.mjs && node tests/e2e/auth-flow.e2e.mjs && node tests/e2e/report-flow.e2e.mjs && node tests/e2e/feed-flow.e2e.mjs",
+    "test:e2e:startup": "node tests/e2e/startup.e2e.mjs",
     "test:e2e:auth": "node tests/e2e/auth-flow.e2e.mjs",
     "test:e2e:report": "node tests/e2e/report-flow.e2e.mjs",
     "test:e2e:feed": "node tests/e2e/feed-flow.e2e.mjs",
