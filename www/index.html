@@ -16,22 +16,316 @@
     <link rel="stylesheet" href="css/app.css">
 </head>
 <body>
-    <main class="boot">
-        <h1 class="brand">CivicWatch</h1>
-        <p class="tagline">Citizens incident reporting</p>
+    <div id="banner" class="banner" role="status" aria-live="polite" hidden>
+        <span id="banner-text"></span>
+        <button type="button" id="banner-close" class="banner-close" aria-label="Dismiss message">×</button>
+    </div>
 
-        <section class="card" aria-labelledby="diag-title">
-            <h2 id="diag-title">Build diagnostics</h2>
-            <p class="muted">Phase 0 scaffold. This screen confirms the APK runs and native plugins load.</p>
-            <ul class="checks">
-                <li>Cordova <code>deviceready</code>: <strong id="chk-ready">waiting…</strong></li>
-                <li>Platform: <strong id="chk-platform">–</strong></li>
-                <li>Camera plugin: <strong id="chk-camera">–</strong></li>
-                <li>Geolocation: <strong id="chk-geo">–</strong></li>
-            </ul>
-        </section>
-    </main>
+    <!-- In-app notification for reports submitted by other users (app open only). -->
+    <div id="toast" class="toast" role="status" aria-live="polite" hidden>
+        <button type="button" id="toast-open" class="toast-open">
+            <span id="toast-kicker" class="toast-kicker"></span>
+            <span id="toast-title" class="toast-title"></span>
+            <span class="toast-hint">Tap to view</span>
+        </button>
+        <button type="button" id="toast-close" class="banner-close" aria-label="Dismiss notification">×</button>
+    </div>
+
+    <!-- Shown until the stored session has been restored (or found missing). -->
+    <section id="screen-loading" class="screen screen-center" aria-busy="true">
+        <div class="logo" aria-hidden="true">CW</div>
+        <div id="loading-spinner" class="spinner" aria-hidden="true"></div>
+        <p id="loading-text" class="muted">Restoring your session…</p>
+        <button type="button" id="loading-retry" class="btn btn-primary" hidden>Try again</button>
+    </section>
+
+    <!-- Log in / Sign up -->
+    <section id="screen-auth" class="screen" hidden>
+        <header class="auth-hero">
+            <div class="logo" aria-hidden="true">CW</div>
+            <h1 class="brand">CivicWatch</h1>
+            <p class="tagline">Report incidents. Keep your community informed.</p>
+        </header>
+
+        <div class="card auth-card">
+            <nav class="segmented" aria-label="Account">
+                <a href="#/login" id="tab-login" class="segment">Log in</a>
+                <a href="#/signup" id="tab-signup" class="segment">Sign up</a>
+            </nav>
+
+            <p id="auth-config-error" class="form-error" role="alert" hidden></p>
+
+            <form id="form-login" novalidate>
+                <div class="field">
+                    <label for="login-email">Email</label>
+                    <input id="login-email" name="email" type="email" autocomplete="email" inputmode="email"
+                           autocapitalize="off" spellcheck="false" aria-describedby="login-email-error">
+                    <p id="login-email-error" class="field-error"></p>
+                </div>
+                <div class="field">
+                    <label for="login-password">Password</label>
+                    <input id="login-password" name="password" type="password" autocomplete="current-password"
+                           aria-describedby="login-password-error">
+                    <p id="login-password-error" class="field-error"></p>
+                </div>
+                <p id="login-error" class="form-error" role="alert"></p>
+                <button type="submit" id="login-submit" class="btn btn-primary btn-block">Log in</button>
+            </form>
+
+            <form id="form-signup" novalidate hidden>
+                <div class="field">
+                    <label for="signup-email">Email</label>
+                    <input id="signup-email" name="email" type="email" autocomplete="email" inputmode="email"
+                           autocapitalize="off" spellcheck="false" aria-describedby="signup-email-error">
+                    <p id="signup-email-error" class="field-error"></p>
+                </div>
+                <div class="field">
+                    <label for="signup-password">Password</label>
+                    <input id="signup-password" name="password" type="password" autocomplete="new-password"
+                           aria-describedby="signup-password-hint signup-password-error">
+                    <p id="signup-password-hint" class="field-hint">At least 8 characters, with a letter and a number.</p>
+                    <p id="signup-password-error" class="field-error"></p>
+                </div>
+                <div class="field">
+                    <label for="signup-confirm">Confirm password</label>
+                    <input id="signup-confirm" name="confirm" type="password" autocomplete="new-password"
+                           aria-describedby="signup-confirm-error">
+                    <p id="signup-confirm-error" class="field-error"></p>
+                </div>
+                <p id="signup-error" class="form-error" role="alert"></p>
+                <button type="submit" id="signup-submit" class="btn btn-primary btn-block">Create account</button>
+            </form>
+
+            <div id="signup-done" class="notice" hidden>
+                <h2>Check your email</h2>
+                <p id="signup-done-text"></p>
+                <p class="muted">Already have an account? Just log in.</p>
+                <a href="#/login" id="signup-done-login" class="btn btn-primary btn-block">Go to log in</a>
+            </div>
+        </div>
+
+        <p class="auth-footer"><a href="#/diagnostics">App diagnostics</a></p>
+    </section>
+
+    <!-- Signed-in area -->
+    <section id="screen-main" class="screen" hidden>
+        <header class="topbar">
+            <button type="button" id="main-back" class="topbar-back" aria-label="Back" hidden>‹</button>
+            <h1 id="view-title">Incidents</h1>
+        </header>
+
+        <main class="content">
+            <section id="view-feed" class="view" hidden>
+                <div id="feed-filters" class="chips" role="group" aria-label="Filter by category"></div>
+                <div class="feed-bar">
+                    <p id="feed-live" class="live live-connecting" role="status" aria-live="polite">Connecting to live updates…</p>
+                    <button type="button" id="feed-refresh" class="btn btn-secondary btn-small">Refresh</button>
+                </div>
+                <p id="feed-loading" class="muted" hidden>Loading reports…</p>
+                <div id="feed-error" class="empty-state" hidden>
+                    <p id="feed-error-text" class="form-error"></p>
+                    <button type="button" id="feed-retry" class="btn btn-secondary">Try again</button>
+                </div>
+                <div id="feed-empty" class="empty-state" hidden>
+                    <h2 id="feed-empty-title">No reports yet</h2>
+                    <p id="feed-empty-text" class="muted"></p>
+                </div>
+                <ul id="feed-list" class="report-list"></ul>
+                <p id="feed-more-error" class="form-error"></p>
+                <button type="button" id="feed-more" class="btn btn-secondary btn-block feed-more" hidden>Load more</button>
+            </section>
+
+            <section id="view-incident" class="view" hidden>
+                <p id="incident-loading" class="muted" hidden>Loading report…</p>
+                <div id="incident-missing" class="empty-state" hidden>
+                    <h2 id="incident-missing-title">Report unavailable</h2>
+                    <p id="incident-missing-text" class="muted"></p>
+                    <button type="button" id="incident-retry" class="btn btn-secondary" hidden>Try again</button>
+                </div>
+                <article id="incident-article" class="card incident" hidden>
+                    <img id="incident-photo" class="incident-photo" alt="" hidden>
+                    <p id="incident-photo-error" class="muted incident-photo-error" hidden>The photo could not be loaded.</p>
+                    <div class="incident-tags">
+                        <span id="incident-category" class="tag"></span>
+                        <span id="incident-status" class="badge"></span>
+                    </div>
+                    <h2 id="incident-title" class="incident-title"></h2>
+                    <p id="incident-time" class="muted"></p>
+                    <p id="incident-description" class="incident-description"></p>
+                    <h3>Location</h3>
+                    <dl class="details">
+                        <dt>Latitude</dt><dd id="incident-lat"></dd>
+                        <dt>Longitude</dt><dd id="incident-lng"></dd>
+                        <dt>Source</dt><dd id="incident-source"></dd>
+                    </dl>
+                    <p class="muted incident-note">Reports are published as submitted and have not been checked.</p>
+                    <p id="incident-own" class="muted" hidden>You submitted this report.</p>
+                </article>
+            </section>
+
+            <section id="view-report" class="view" hidden>
+                <form id="form-report" class="card report-form" novalidate>
+                    <p class="muted">Fields marked <span aria-hidden="true">*</span><span class="sr-only">with an asterisk</span>
+                        are required. Your report is published straight away and labelled <strong>unverified</strong>.</p>
+
+                    <div class="field">
+                        <label for="report-title">Title <span aria-hidden="true">*</span></label>
+                        <input id="report-title" name="title" type="text" maxlength="120" autocomplete="off"
+                               aria-describedby="report-title-hint report-title-error">
+                        <p id="report-title-hint" class="field-hint">3–120 characters, e.g. "Two-car collision on Allen Avenue"</p>
+                        <p id="report-title-error" class="field-error"></p>
+                    </div>
+
+                    <div class="field">
+                        <label for="report-category">Category <span aria-hidden="true">*</span></label>
+                        <select id="report-category" name="category" aria-describedby="report-category-error">
+                            <option value="">Choose a category</option>
+                        </select>
+                        <p id="report-category-error" class="field-error"></p>
+                    </div>
+
+                    <div class="field">
+                        <label for="report-description">Description <span aria-hidden="true">*</span></label>
+                        <textarea id="report-description" name="description" rows="5" maxlength="2000"
+                                  aria-describedby="report-description-hint report-description-error"></textarea>
+                        <p id="report-description-hint" class="field-hint">10–2000 characters. What happened, and is anyone hurt?</p>
+                        <p id="report-description-error" class="field-error"></p>
+                    </div>
+
+                    <fieldset class="field-group" aria-describedby="report-location-note report-location-error">
+                        <legend>Location <span aria-hidden="true">*</span></legend>
+                        <p id="report-location-note" class="notice-inline">
+                            Only use your current location if you are at the incident now. Otherwise enter
+                            the incident's coordinates. Coordinates are visible to all signed-in users.
+                        </p>
+                        <button type="button" id="report-locate" class="btn btn-secondary btn-block">Use my location</button>
+                        <p id="report-location-status" class="field-hint" role="status" aria-live="polite"></p>
+                        <div class="coords">
+                            <div class="field">
+                                <label for="report-latitude">Latitude</label>
+                                <input id="report-latitude" name="latitude" type="text" autocomplete="off"
+                                       spellcheck="false" placeholder="e.g. 6.5244">
+                            </div>
+                            <div class="field">
+                                <label for="report-longitude">Longitude</label>
+                                <input id="report-longitude" name="longitude" type="text" autocomplete="off"
+                                       spellcheck="false" placeholder="e.g. 3.3792">
+                            </div>
+                        </div>
+                        <p id="report-location-error" class="field-error"></p>
+                    </fieldset>
+
+                    <fieldset class="field-group" aria-describedby="report-photo-hint report-photo-error">
+                        <legend>Photo <span class="muted-inline">(optional)</span></legend>
+                        <p id="report-photo-hint" class="field-hint">JPEG, PNG or WebP. Photos are resized to 1600&nbsp;px and
+                            hidden metadata (including GPS tags) is removed. Visible to all signed-in users.</p>
+                        <div id="report-photo-pick" class="photo-actions">
+                            <button type="button" id="report-photo-camera" class="btn btn-secondary">Take photo</button>
+                            <button type="button" id="report-photo-library" class="btn btn-secondary">Choose photo</button>
+                        </div>
+                        <input id="report-photo-input" type="file" accept="image/jpeg,image/png,image/webp" hidden>
+                        <input id="report-photo-capture" type="file" accept="image/*" capture="environment" hidden>
+                        <p id="report-photo-status" class="field-hint" role="status" aria-live="polite"></p>
+                        <div id="report-photo-preview" class="photo-preview" hidden>
+                            <img id="report-photo-img" alt="Selected incident photo">
+                            <p id="report-photo-meta" class="field-hint"></p>
+                            <div class="photo-actions">
+                                <button type="button" id="report-photo-replace" class="btn btn-secondary">Replace</button>
+                                <button type="button" id="report-photo-remove" class="btn btn-danger">Remove</button>
+                            </div>
+                        </div>
+                        <p id="report-photo-error" class="field-error"></p>
+                    </fieldset>
+
+                    <p id="report-error" class="form-error" role="alert"></p>
+                    <p id="report-progress" class="field-hint" role="status" aria-live="polite"></p>
+                    <button type="submit" id="report-submit" class="btn btn-primary btn-block">Submit report</button>
+                </form>
+            </section>
+
+            <section id="view-my-reports" class="view" hidden>
+                <p id="my-reports-loading" class="muted" hidden>Loading your reports…</p>
+                <div id="my-reports-error" class="empty-state" hidden>
+                    <p id="my-reports-error-text" class="form-error"></p>
+                    <button type="button" id="my-reports-retry" class="btn btn-secondary">Try again</button>
+                </div>
+                <div id="my-reports-empty" class="empty-state" hidden>
+                    <h2>No reports yet</h2>
+                    <p class="muted">Incidents you submit will be listed here.</p>
+                </div>
+                <ul id="my-reports-list" class="report-list"></ul>
+            </section>
+
+            <section id="view-profile" class="view" hidden>
+                <div class="card">
+                    <h2>Account</h2>
+                    <dl class="details">
+                        <dt>Email</dt><dd id="profile-email"></dd>
+                        <dt>Member since</dt><dd id="profile-since"></dd>
+                    </dl>
+                    <p id="profile-error" class="form-error" role="alert"></p>
+                    <button type="button" id="logout-button" class="btn btn-danger btn-block">Log out</button>
+                </div>
+                <p class="auth-footer"><a href="#/diagnostics">App diagnostics</a></p>
+            </section>
+        </main>
+
+        <nav class="tabbar" aria-label="Main">
+            <a href="#/feed" class="tab" data-route="feed">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16M4 12h16M4 19h10"/></svg>
+                <span>Feed</span>
+            </a>
+            <a href="#/report" class="tab" data-route="report">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+                <span>Report</span>
+            </a>
+            <a href="#/my-reports" class="tab" data-route="my-reports">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4h10v16H7zM10 9h4M10 13h4"/></svg>
+                <span>My Reports</span>
+            </a>
+            <a href="#/profile" class="tab" data-route="profile">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 20c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>
+                <span>Profile</span>
+            </a>
+        </nav>
+    </section>
+
+    <!-- Diagnostics (available signed in or out) -->
+    <section id="screen-diagnostics" class="screen" hidden>
+        <header class="topbar">
+            <a href="#/back" id="diag-back" class="topbar-back" aria-label="Back">‹</a>
+            <h1 id="diag-title">Diagnostics</h1>
+        </header>
+        <main class="content">
+            <section class="card" aria-labelledby="diag-title">
+                <p class="muted">Confirms the APK runs, native plugins load and the backend is reachable.</p>
+                <ul class="checks">
+                    <li>Cordova <code>deviceready</code>: <strong id="chk-ready">waiting…</strong></li>
+                    <li>Platform: <strong id="chk-platform">–</strong></li>
+                    <li>Camera plugin: <strong id="chk-camera">–</strong></li>
+                    <li>Geolocation: <strong id="chk-geo">–</strong></li>
+                    <li>Supabase config: <strong id="chk-config">–</strong></li>
+                    <li>Supabase connection: <strong id="chk-backend">–</strong></li>
+                </ul>
+            </section>
+        </main>
+    </section>
+
     <script src="cordova.js"></script>
+    <script src="vendor/supabase-js-2.117.2.js"></script>
+    <script src="js/config.js"></script>
+    <script src="js/config-check.js"></script>
+    <script src="js/supabase-client.js"></script>
+    <script src="js/auth-logic.js"></script>
+    <script src="js/session.js"></script>
+    <script src="js/my-reports.js"></script>
+    <script src="js/report-logic.js"></script>
+    <script src="js/report-submit.js"></script>
+    <script src="js/photo.js"></script>
+    <script src="js/report-view.js"></script>
+    <script src="js/feed.js"></script>
+    <script src="js/feed-view.js"></script>
+    <script src="js/diagnostics.js"></script>
     <script src="js/app.js"></script>
 </body>
 </html>

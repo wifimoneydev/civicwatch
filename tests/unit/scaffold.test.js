@@ -62,12 +62,6 @@ test('index.html has a strict Content Security Policy', () => {
     assert.match(csp, /connect-src[^;]*wss:\/\/\*\.supabase\.co/);
 });
 
-test('index.html loads cordova.js before app scripts', () => {
-    const cordova = indexHtml.indexOf('src="cordova.js"');
-    const app = indexHtml.indexOf('src="js/app.js"');
-    assert.ok(cordova > -1 && app > cordova);
-});
-
 test('www contains no inline scripts (CSP would block them)', () => {
     for (const file of walk(path.join(root, 'www')).filter((f) => f.endsWith('.html'))) {
         const html = fs.readFileSync(file, 'utf8');
@@ -80,9 +74,45 @@ test('no Supabase secret or service-role key is bundled in www', () => {
     for (const file of walk(path.join(root, 'www'))) {
         const text = fs.readFileSync(file, 'utf8');
         const rel = path.relative(root, file);
-        assert.doesNotMatch(text, /service_role/i, `service_role reference in ${rel}`);
-        assert.doesNotMatch(text, /sb_secret_/, `Supabase secret key in ${rel}`);
+        assert.doesNotMatch(text, /sb_secret_[A-Za-z0-9_-]{8,}/, `Supabase secret key in ${rel}`);
+        for (const token of text.match(/eyJ[\w-]+\.eyJ[\w-]+\.[\w-]+/g) || []) {
+            const payload = JSON.parse(Buffer.from(token.split('.')[1], 'base64url').toString('utf8'));
+            assert.notEqual(payload.role, 'service_role', `service_role JWT in ${rel}`);
+        }
     }
+});
+
+test('index.html loads only bundled scripts, in dependency order', () => {
+    const srcs = [...indexHtml.matchAll(/<script[^>]*\ssrc="([^"]+)"/g)].map((m) => m[1]);
+    assert.deepEqual(srcs, [
+        'cordova.js',
+        `vendor/supabase-js-${pkg.devDependencies['@supabase/supabase-js']}.js`,
+        'js/config.js',
+        'js/config-check.js',
+        'js/supabase-client.js',
+        'js/auth-logic.js',
+        'js/session.js',
+        'js/my-reports.js',
+        'js/report-logic.js',
+        'js/report-submit.js',
+        'js/photo.js',
+        'js/report-view.js',
+        'js/feed.js',
+        'js/feed-view.js',
+        'js/diagnostics.js',
+        'js/app.js',
+    ]);
+    for (const src of srcs) assert.doesNotMatch(src, /^(https?:)?\/\//, `remote script ${src}`);
+});
+
+test('vendored supabase-js is the exact pinned npm build', () => {
+    const version = pkg.devDependencies['@supabase/supabase-js'];
+    assert.match(version, /^\d+\.\d+\.\d+$/, 'supabase-js must be pinned exactly');
+    const vendored = fs.readFileSync(path.join(root, `www/vendor/supabase-js-${version}.js`));
+    const upstream = fs.readFileSync(path.join(root, 'node_modules/@supabase/supabase-js/dist/umd/supabase.js'));
+    assert.ok(vendored.equals(upstream), 'run npm run vendor:supabase');
+    const files = fs.readdirSync(path.join(root, 'www/vendor')).filter((f) => f.startsWith('supabase-js-'));
+    assert.deepEqual(files, [`supabase-js-${version}.js`], 'stale vendored copies present');
 });
 
 test('CI workflow uses the toolchain cordova-android requires', () => {

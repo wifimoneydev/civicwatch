@@ -10,10 +10,21 @@
   },
   "scripts": {
     "test": "node --test \"tests/unit/**/*.test.js\"",
+    "test:e2e": "node tests/e2e/auth-flow.e2e.mjs && node tests/e2e/report-flow.e2e.mjs && node tests/e2e/feed-flow.e2e.mjs",
+    "test:e2e:auth": "node tests/e2e/auth-flow.e2e.mjs",
+    "test:e2e:report": "node tests/e2e/report-flow.e2e.mjs",
+    "test:e2e:feed": "node tests/e2e/feed-flow.e2e.mjs",
+    "check:supabase": "node scripts/check-supabase.mjs",
+    "check:policies": "node scripts/check-policies.mjs",
+    "check:report": "node scripts/check-report.mjs",
+    "check:realtime": "node scripts/check-realtime.mjs",
+    "vendor:supabase": "node scripts/vendor-supabase.js",
     "serve": "npx --yes http-server@14.1.1 www -p 8080 -c-1",
     "build:android": "cordova build android --debug"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "0.5.8",
+    "@supabase/supabase-js": "2.117.2",
     "cordova": "13.0.0",
     "cordova-android": "15.1.0",
     "cordova-plugin-camera": "8.0.0",
